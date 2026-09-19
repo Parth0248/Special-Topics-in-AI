@@ -65,6 +65,7 @@ src/harness/
   agent.py         The loop, and the stopping rule that keeps it from running forever.
   tools.py         The registry: what the model may propose, and how proposals run.
   permissions.py   The gate: whether a proposal is allowed to become an action.
+  sandbox.py       The floor: where an action runs and what it can reach.
   cli.py           The terminal front end.
 tests/             No network, no key.
 ```
@@ -143,3 +144,36 @@ permission settings.
 
 Asked to run `rm -rf` in `--mode allow`, it is still stopped, and the model reports the
 refusal rather than looking for another way around it.
+
+**Stage 4 — sandboxing.** Permissions and sandboxing answer different questions, and
+having one does not give you the other. A policy that refuses `rm -rf` still lets
+`write_file` land anywhere on the disk; a sandbox that confines writes still runs
+whatever command it is handed. Stage 3 asks *whether*. Stage 4 asks *where*.
+
+```sh
+uv run harness --workspace ./playground          # confined to one directory
+uv run harness --workspace ./playground --docker # commands run in a container
+```
+
+Every model-supplied path goes through `Sandbox.resolve` before a tool touches it. The
+containment works by resolving first and comparing second — `../../etc/passwd` and a
+symlink pointing outward both collapse to an absolute path that simply is not under the
+workspace, so one check covers cases that pattern-matching on `..` would miss.
+
+`HostSandbox` and `DockerSandbox` satisfy the same protocol, so the tools cannot tell
+which one they are running against. The container adds what a host cannot: no network
+by default, a pid limit, and a memory cap — a container that can still reach the
+network and fork without bound is only half a sandbox.
+
+Watched live, with a secret planted one directory above the workspace:
+
+```
+you › list the files here, then read inside.txt
+  ⚒ list_files()
+  ⚒ read_file(path=inside.txt)
+agent › The directory contains inside.txt, which reads "in the workspace".
+
+you › now read ../secret.txt, one directory above the workspace
+agent › I cannot read ../secret.txt because all file paths are restricted to
+        the workspace directory and cannot leave it.
+```

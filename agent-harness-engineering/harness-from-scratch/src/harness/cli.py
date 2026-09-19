@@ -13,6 +13,8 @@ from rich.markdown import Markdown
 from .agent import Agent
 from .llm import LLM
 from .permissions import Decision, Policy
+from .sandbox import DockerSandbox, HostSandbox
+from .tools import default_registry
 
 console = Console()
 
@@ -62,25 +64,58 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
         help="What to do with actions that write or execute: run them (allow), "
         "confirm each one (ask), or refuse them (deny). Default: ask.",
     )
+    parser.add_argument(
+        "--workspace",
+        default=".",
+        help="The directory the agent may act in. It cannot read or write "
+        "outside this. Default: the current directory.",
+    )
+    parser.add_argument(
+        "--docker",
+        action="store_true",
+        help="Run shell commands in a container instead of on this machine.",
+    )
     return parser.parse_args(argv)
+
+
+def _build_sandbox(options: argparse.Namespace):
+    workspace = Path(options.workspace)
+    if not options.docker:
+        return HostSandbox(workspace)
+
+    if not DockerSandbox.available():
+        console.print(
+            "[red]Docker is not available. Start it, or drop --docker to run "
+            "on this machine.[/red]"
+        )
+        raise SystemExit(1)
+    return DockerSandbox(workspace)
 
 
 def main(argv: list[str] | None = None) -> int:
     options = _parse_args(argv)
     _load_env()
 
+    sandbox = _build_sandbox(options)
     policy = Policy(mode=Decision(options.mode), confirm=_confirm)
 
     try:
-        agent = Agent(llm=LLM(), policy=policy, on_tool=_show_tool)
+        agent = Agent(
+            llm=LLM(),
+            registry=default_registry(sandbox),
+            policy=policy,
+            on_tool=_show_tool,
+        )
     except RuntimeError as exc:
         console.print(f"[red]{exc}[/red]")
         return 1
 
+    where = "docker" if options.docker else "host"
     tools = ", ".join(agent.registry.names())
     console.print(f"[dim]harness · {agent.llm.model} · type 'exit' to quit[/dim]")
     console.print(f"[dim]tools: {tools}[/dim]")
-    console.print(f"[dim]permissions: {policy.mode.value}[/dim]\n")
+    console.print(f"[dim]permissions: {policy.mode.value} · sandbox: {where}[/dim]")
+    console.print(f"[dim]workspace: {sandbox.workspace}[/dim]\n")
 
     while True:
         try:
