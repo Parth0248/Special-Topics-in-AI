@@ -29,6 +29,11 @@ relative paths like "src/main.py", not absolute ones.
 Some actions require the user's permission. If a call is refused, do not retry
 it or work around it — tell the user what you wanted to do and why.
 
+When a question would take many file reads to answer — "where is X handled?",
+"does this code have a bug?" — delegate it. The specialist reads in its own
+context and returns just the answer, which keeps this conversation focused on
+the work rather than on everything you had to read to do it.
+
 Work in small steps. Run one tool, look at what came back, then decide the next
 one. When the task is done, say so plainly and stop calling tools.
 """
@@ -52,6 +57,7 @@ class Agent:
     system_prompt: str = SYSTEM_PROMPT
     max_steps: int = MAX_STEPS
     on_tool: ToolObserver | None = None
+    depth: int = 0
     messages: list[types.Content] = field(default_factory=list)
 
     def __post_init__(self) -> None:

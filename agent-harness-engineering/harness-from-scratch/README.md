@@ -2,9 +2,10 @@
 
 A coding agent built from nothing, one capability at a time.
 
-The goal is not to end up with a agent that works — it is to make every design decision
-in a harness visible. Each stage adds exactly one idea, runs, and is committed on its
-own, so the diff between two stages *is* the explanation of what that capability costs.
+The goal is not to end up with an agent that works — it is to make every design decision
+in a harness visible. Each stage adds exactly one idea, runs against a real model, and
+is committed on its own, so the diff between two stages *is* the explanation of what
+that capability costs.
 
 ## The stages
 
@@ -18,6 +19,12 @@ own, so the diff between two stages *is* the explanation of what that capability
 | 6 | Subagents | How does one agent delegate without losing the thread? |
 
 Stages land as separate commits. `git log --oneline` reads as the table above.
+
+One rule turned out to run through all six stages, and it is the thing worth taking
+away: **the transcript is a structure with invariants, not a list of strings.** It
+showed up three separate times — a rebuilt tool call that lost its `thought_signature`,
+a denial that returned nothing instead of a refusal, and a compaction that cut between
+a call and its result. Same failure, three disguises.
 
 ## Running it
 
@@ -67,6 +74,7 @@ src/harness/
   permissions.py   The gate: whether a proposal is allowed to become an action.
   sandbox.py       The floor: where an action runs and what it can reach.
   context.py       The budget: what to keep when the transcript outgrows the window.
+  subagents.py     Delegation: bounded work in a transcript of its own.
   cli.py           The terminal front end.
 tests/             No network, no key.
 ```
@@ -214,3 +222,43 @@ agent › The secret ingredient was smoked paprika.
 ```
 
 The transcript stayed at 6 turns throughout while the session ran on.
+
+**Stage 6 — subagents.** The reason to delegate is not that the work is hard. It is
+that the work is *noisy*: answering "does this code have a bug?" means reading files
+that are irrelevant the moment the question is answered, and in one transcript they are
+irrelevant *forever*. A subagent reads in its own context and returns only the answer.
+
+The contract is deliberately narrow — one task string in, one string out. No shared
+transcript, no access to the user, and three guarantees enforced in code:
+
+- **It cannot delegate in turn.** `MAX_DEPTH = 1`. Recursive delegation is a way to
+  spend a lot of money quickly.
+- **It cannot hold more permission than its parent.** `ask` narrows to `deny`, because
+  nothing can approve on a subagent's behalf — hanging or silently allowing are both
+  worse than refusing.
+- **It only gets the tools its role names.** The explorer and reviewer are read-only,
+  so a review cannot modify the code it is reviewing.
+
+Asked to review a file with two planted bugs, the reviewer found both:
+
+```
+you › use the reviewer specialist to review app/cart.py, then summarise
+
+  ⚒ delegate(role=reviewer, task=Review app/cart.py for correctness bugs…)
+      sub ⚒ list_files()  read_file(app/cart.py)  read_file(app/inventory.py)  …
+
+agent ›
+1. Unconditional IndexError in apply_discount (High) — range(len(prices) + 1)
+   accesses index len(prices), out of bounds on every input.
+2. ZeroDivisionError in average_item_price (Medium) — len(items) is 0 for an
+   empty list.
+```
+
+Five tool calls happened; none of them are in the parent's transcript.
+
+**When it is not worth it.** Testing this honestly meant also testing where it loses.
+Asked to find what `RETRY_LIMIT` is set to, the delegating agent spawned an explorer
+that read seven files (~127 tokens of parent context); the plain agent ran one `grep`
+and answered in ~53. Delegation costs a whole extra agent loop, and it only pays when
+the work needs judgement across many files rather than a single lookup. A harness that
+delegates everything is slower and more expensive than one that never does.

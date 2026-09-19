@@ -14,6 +14,7 @@ from .agent import Agent
 from .llm import LLM
 from .permissions import Decision, Policy
 from .sandbox import DockerSandbox, HostSandbox
+from .subagents import delegation_tool
 from .tools import default_registry
 
 console = Console()
@@ -109,6 +110,10 @@ def main(argv: list[str] | None = None) -> int:
     except RuntimeError as exc:
         console.print(f"[red]{exc}[/red]")
         return 1
+
+    # Registered after construction because the tool closes over the agent that
+    # owns it — that is what gives a subagent the parent's sandbox and policy.
+    agent.registry.add(delegation_tool(agent))
 
     where = "docker" if options.docker else "host"
     tools = ", ".join(agent.registry.names())

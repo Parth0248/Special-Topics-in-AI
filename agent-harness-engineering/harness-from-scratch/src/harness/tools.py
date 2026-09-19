@@ -61,6 +61,9 @@ class Registry:
     def names(self) -> list[str]:
         return sorted(self._tools)
 
+    def get(self, name: str) -> Tool | None:
+        return self._tools.get(name)
+
     def as_gemini_tools(self) -> list[types.Tool]:
         if not self._tools:
             return []
