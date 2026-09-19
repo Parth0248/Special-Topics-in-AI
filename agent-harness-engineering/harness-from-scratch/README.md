@@ -34,7 +34,8 @@ uv run harness
 You get a prompt. Type a question, get an answer, type `exit` to leave.
 
 ```
-harness · gemini-2.5-flash · type 'exit' to quit
+harness · gemini-3.8-flash · type 'exit' to quit
+tools: list_files, read_file, run_bash, write_file
 
 you › what is a ReAct loop?
 
@@ -42,24 +43,53 @@ agent ›
 A ReAct loop alternates between reasoning and acting…
 ```
 
+Any Gemini model id works — set `HARNESS_MODEL` in `.env`.
+
 ## How it is put together
 
 ```
 src/harness/
   llm.py      The model boundary. Nothing above this file imports a provider SDK.
   agent.py    The loop, and the stopping rule that keeps it from running forever.
+  tools.py    The registry: what the model may propose, and how proposals run.
   cli.py      The terminal front end.
 ```
 
 The split matters more than it looks. `agent.py` asks `llm.py` for a `Response` and
 never learns which provider produced it, which is what makes the backend swappable
-later without touching the loop.
+later without touching the loop. It asks `tools.py` to run a call by name and never
+learns what that tool does, which is what lets stage 3 insert a permission check
+between the proposal and the action.
 
-## Stage 1 notes
+## Notes from the stages so far
 
-The loop currently stops on the model's first reply, because there are no tools to run
-yet. The branch that would dispatch a tool call is present and raises — it is the seam
-stage 2 opens.
+**Stage 1 — the loop.** `MAX_STEPS` exists from the first commit on purpose. An agent
+loop without a step ceiling is one malformed model response away from spending real
+money.
 
-`MAX_STEPS` exists from the first commit on purpose. An agent loop without a step
-ceiling is one malformed model response away from spending real money.
+**Stage 2 — tools.** Three things turned out to be load-bearing:
+
+- *Tool output is context.* Every result is truncated, because one `cat` of a large
+  file otherwise evicts the rest of the conversation.
+- *A crashed tool must not kill the loop.* `Registry.invoke` converts exceptions into
+  text, so a bad path or a failed command becomes something the model can read and
+  recover from rather than a traceback.
+- *The model's turn goes back into the transcript verbatim.* Sending a tool result
+  without its matching call is rejected outright. On a thinking model it is stricter
+  than that: each function call carries an opaque `thought_signature`, and rebuilding
+  the call from its parsed name and arguments — which is the obvious way to write this —
+  drops the signature and earns a `400`. The transcript has to replay the provider's
+  own parts, not a reconstruction of them.
+
+Here is stage 2 doing real work — two tools, one task, a file that exists afterward:
+
+```
+you › read notes.txt and tell me how many lines it has, then write that number
+      to summary.txt
+
+  ⚒ read_file(path=…/notes.txt)
+  ⚒ write_file(path=…/summary.txt, content=3)
+
+agent ›
+I read notes.txt, found it has 3 lines, and wrote 3 to summary.txt.
+```

@@ -28,10 +28,17 @@ class ToolCall:
 
 @dataclass
 class Response:
-    """One turn from the model: prose, tool calls, or both."""
+    """One turn from the model: prose, tool calls, or both.
+
+    `parts` keeps the provider's own representation of the turn. Thinking models
+    attach an opaque `thought_signature` to each function call and reject the
+    next request if it does not come back, so the turn is replayed as it was
+    received rather than rebuilt from the parsed fields.
+    """
 
     text: str = ""
     tool_calls: list[ToolCall] = field(default_factory=list)
+    parts: list[types.Part] = field(default_factory=list)
 
     @property
     def wants_tools(self) -> bool:
@@ -72,10 +79,13 @@ class LLM:
     def _parse(raw: types.GenerateContentResponse) -> Response:
         text_parts: list[str] = []
         calls: list[ToolCall] = []
+        parts: list[types.Part] = []
 
         for candidate in raw.candidates or []:
             for part in (candidate.content.parts if candidate.content else None) or []:
-                if part.text:
+                parts.append(part)
+                # Thinking traces are not part of the visible answer.
+                if part.text and not part.thought:
                     text_parts.append(part.text)
                 if part.function_call:
                     fc = part.function_call
@@ -87,4 +97,4 @@ class LLM:
                         )
                     )
 
-        return Response(text="".join(text_parts).strip(), tool_calls=calls)
+        return Response(text="".join(text_parts).strip(), tool_calls=calls, parts=parts)

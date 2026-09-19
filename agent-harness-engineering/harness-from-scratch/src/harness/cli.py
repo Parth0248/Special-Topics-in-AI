@@ -25,16 +25,29 @@ def _load_env() -> None:
     load_dotenv(project_root.parent / ".env")
 
 
+def _show_tool(name: str, args: dict) -> None:
+    """Print each tool call so the user can see what the agent is doing."""
+    preview = ", ".join(f"{k}={_clip(str(v))}" for k, v in args.items())
+    console.print(f"  [yellow]⚒ {name}[/yellow][dim]({preview})[/dim]")
+
+
+def _clip(value: str, limit: int = 60) -> str:
+    flat = value.replace("\n", "↵")
+    return flat if len(flat) <= limit else flat[:limit] + "…"
+
+
 def main() -> int:
     _load_env()
 
     try:
-        agent = Agent(llm=LLM())
+        agent = Agent(llm=LLM(), on_tool=_show_tool)
     except RuntimeError as exc:
         console.print(f"[red]{exc}[/red]")
         return 1
 
-    console.print(f"[dim]harness · {agent.llm.model} · type 'exit' to quit[/dim]\n")
+    tools = ", ".join(agent.registry.names())
+    console.print(f"[dim]harness · {agent.llm.model} · type 'exit' to quit[/dim]")
+    console.print(f"[dim]tools: {tools}[/dim]\n")
 
     while True:
         try:
