@@ -61,11 +61,12 @@ because any of the three escaping would kill the loop.
 
 ```
 src/harness/
-  llm.py      The model boundary. Nothing above this file imports a provider SDK.
-  agent.py    The loop, and the stopping rule that keeps it from running forever.
-  tools.py    The registry: what the model may propose, and how proposals run.
-  cli.py      The terminal front end.
-tests/        Tool-layer tests. No network, no key.
+  llm.py           The model boundary. Nothing above this imports a provider SDK.
+  agent.py         The loop, and the stopping rule that keeps it from running forever.
+  tools.py         The registry: what the model may propose, and how proposals run.
+  permissions.py   The gate: whether a proposal is allowed to become an action.
+  cli.py           The terminal front end.
+tests/             No network, no key.
 ```
 
 The split matters more than it looks. `agent.py` asks `llm.py` for a `Response` and
@@ -106,3 +107,39 @@ you › read notes.txt and tell me how many lines it has, then write that number
 agent ›
 I read notes.txt, found it has 3 lines, and wrote 3 to summary.txt.
 ```
+
+**Stage 3 — permissions.** The gate sits between the proposal and the action, in
+`Agent._dispatch`. That position is the whole point: a check that lives *inside* a tool
+is not a permission system, it is a tool that sometimes refuses. Policy never sees the
+result of an action, only the request for one.
+
+Run with `--mode allow`, `--mode ask` (the default), or `--mode deny`:
+
+```sh
+uv run harness --mode deny
+```
+
+Two rules that are not the same rule:
+
+- **Mode** covers anything that writes or executes. Reads never ask.
+- **The deny list** is absolute. `rm -rf`, `mkfs`, `dd of=/dev/…`, fork bombs and
+  `git push --force` are refused in `allow` mode too, because a mode is a statement
+  about trust and those commands are unrecoverable regardless of who asked.
+
+The subtle part is what a refusal returns. Denying by *not answering* the model
+desyncs the transcript and the next request is rejected — the same failure class as
+the dropped `thought_signature` in stage 2. So a denial is a normal tool result whose
+content happens to be the refusal, and the model reads it and adapts:
+
+```
+you › delete keep.txt using a shell command
+
+  ✗ run_bash(command=rm "…/keep.txt")
+
+agent ›
+I attempted to delete the file, but the shell execution was denied due to
+permission settings.
+```
+
+Asked to run `rm -rf` in `--mode allow`, it is still stopped, and the model reports the
+refusal rather than looking for another way around it.

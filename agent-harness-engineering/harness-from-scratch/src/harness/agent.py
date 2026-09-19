@@ -13,6 +13,7 @@ from typing import Callable
 from google.genai import types
 
 from .llm import LLM, Response, ToolCall
+from .permissions import Policy
 from .tools import Registry, default_registry
 
 SYSTEM_PROMPT = """You are a coding assistant running inside a terminal harness.
@@ -21,6 +22,9 @@ You have tools for reading, writing, and listing files, and for running shell
 commands. Use them instead of guessing: if a question is about the user's
 project, read the project.
 
+Some actions require the user's permission. If a call is refused, do not retry
+it or work around it — tell the user what you wanted to do and why.
+
 Work in small steps. Run one tool, look at what came back, then decide the next
 one. When the task is done, say so plainly and stop calling tools.
 """
@@ -28,9 +32,9 @@ one. When the task is done, say so plainly and stop calling tools.
 # A runaway loop burns tokens and money. Every harness needs this number.
 MAX_STEPS = 25
 
-# Called with (tool_name, args) before each tool runs, so a front end can show
-# the user what the agent is doing. Stage 3 replaces this with a real gate.
-ToolObserver = Callable[[str, dict], None]
+# Called with (tool_name, args, was_allowed) after each decision, so a front end
+# can show the user what the agent did and what it was stopped from doing.
+ToolObserver = Callable[[str, dict, bool], None]
 
 
 @dataclass
@@ -39,6 +43,7 @@ class Agent:
 
     llm: LLM
     registry: Registry = field(default_factory=default_registry)
+    policy: Policy = field(default_factory=Policy)
     system_prompt: str = SYSTEM_PROMPT
     max_steps: int = MAX_STEPS
     on_tool: ToolObserver | None = None
@@ -70,11 +75,21 @@ class Agent:
         )
 
     def _dispatch(self, call: ToolCall) -> types.Part:
-        """Run one proposed tool call and package the result for the model."""
-        if self.on_tool:
-            self.on_tool(call.name, call.args)
+        """Judge one proposed call, run it if allowed, and answer the model.
 
-        output = self.registry.invoke(call.name, call.args)
+        A refusal still returns a response. Leaving a call unanswered desyncs
+        the transcript and the next request is rejected — so 'denied' has to be
+        a result the model receives, not a result it never gets.
+        """
+        verdict = self.policy.check(call.name, call.args)
+
+        if self.on_tool:
+            self.on_tool(call.name, call.args, verdict.allowed)
+
+        if verdict.allowed:
+            output = self.registry.invoke(call.name, call.args)
+        else:
+            output = f"Denied: {verdict.reason}"
 
         return types.Part(
             function_response=types.FunctionResponse(
