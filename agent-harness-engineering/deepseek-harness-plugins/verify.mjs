@@ -13,7 +13,6 @@
 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { pathToFileURL } from 'node:url'
 
 const plugins = new URL('./plugins/', import.meta.url)
 

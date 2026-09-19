@@ -35,6 +35,11 @@ where the proposal was plausible but not actually better, and diminishing return
 it converges. The winner is saved at [`runs/best-solution-20260919.py`](runs/) and
 reproduces `0.994848` exactly on a fresh run.
 
+These are the scores from one specific run, recorded in [`runs/`](runs/). The model
+proposes differently each time, so your numbers will differ — a later two-iteration
+run happened to pick the same first two moves, but that is not guaranteed. The
+*scoring* is deterministic; the proposing is not.
+
 ## Running it
 
 ```sh

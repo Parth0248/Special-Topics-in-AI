@@ -81,6 +81,26 @@ pnpm dsh web \
 `--patch` is a launcher flag, so it goes *before* the app's own flags (`--port`,
 `--no-open`). Putting it after gets you `error: unknown option '--patch'`.
 
+## Verifying them without the UI
+
+Booting proves the plugins *load*. `verify.mjs` proves they *work*: it calls every tool,
+fires the event listener with both a success and a failure, and drives the loop warning
+past its threshold.
+
+```sh
+cd /path/to/deepseek-harness      # supplies the TypeScript loader
+node --import tsx/esm /path/to/this/verify.mjs
+```
+
+```
+ remember: Saved "test-command". 1 note on the scratchpad.
+ forget: Forgot "build-command". 1 note remains.
+ pulse (after 4 calls, 1 failure):
+     read_file: 3 calls, 1 failed
+     write_file: 1 call
+  [warn] [pulse] run_bash has run 3 times this session — possible loop.
+```
+
 ## The Creator-mode profile
 
 The harness composes 166 plugin entries, many shipped switched off. `creator-profile.yml`
@@ -121,6 +141,7 @@ plugins/
   session-pulse/src/index.ts   Event seam: listens to tools/result.
 creator-profile.yml            The configured plugins — committed, machine independent.
 cordis.template.yml            Patch template; {{ROOT}} is filled in by setup.
+verify.mjs                     Exercises both plugins without booting the harness.
 scripts/
   link-harness.mjs             Symlink the harness's packages into node_modules.
   setup.mjs                    Render cordis.local.yml from the template.

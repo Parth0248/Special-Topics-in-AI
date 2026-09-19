@@ -50,3 +50,6 @@ Each project has its own README and its own setup. All of them read secrets from
 ```sh
 cp ../.env.example ../.env
 ```
+
+[`DEMOS.md`](DEMOS.md) has the exact command sequence for each project, in the order
+that shows the most in the least time.
