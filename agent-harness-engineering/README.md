@@ -18,18 +18,22 @@ capability costs.
 
 **Python · Gemini**
 
-### 2. `deepseek-harness-plugins/` — in progress
+### 2. [`deepseek-harness-plugins/`](deepseek-harness-plugins/)
 
-Two plugins written from scratch for the DeepSeek Harness, plus a Creator-mode profile
-layering five more on top of the stock build. Where project 1 is about designing seams,
-this one is about fitting into someone else's.
+Two plugins written from scratch for the DeepSeek Harness — one on the tool seam, one
+on the event seam — plus a Creator-mode profile turning on seven more of the ones it
+already ships. Where project 1 is about designing seams, this one is about finding
+someone else's and fitting into them without forking anything.
 
 **TypeScript · Cordis**
 
-### 3. `autoresearch-harness/` — planned
+### 3. [`autoresearch-harness/`](autoresearch-harness/)
 
-A harness aimed at a task where success is not a passing test but a result worth
-keeping: propose a hypothesis, run the experiment, read what happened, revise.
+A harness aimed at a task with no test to pass: propose a change, run it, keep it or
+revert it, repeat. Eight iterations took a classifier from 0.921 to 0.995 ROC-AUC,
+with three reverts along the way.
+
+**Python · Gemini · scikit-learn**
 
 ## Why three
 
