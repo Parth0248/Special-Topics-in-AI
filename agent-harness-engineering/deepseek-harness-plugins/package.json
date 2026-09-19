@@ -1,0 +1,16 @@
+{
+  "name": "dsh-plugins",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Two plugins for the DeepSeek Harness: a persistent scratchpad and a session activity monitor.",
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "link:harness": "node scripts/link-harness.mjs"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/schemastery": "*"
+  }
+}

@@ -1,0 +1,68 @@
+# Creator-mode profile patch — the configured half of this project.
+#
+# The harness ships ~166 plugin entries, many switched off by default. This
+# patch turns on seven of them and re-tunes two more, producing a profile aimed
+# at long autonomous sessions rather than short supervised ones.
+#
+# Apply it alongside the authored plugins:
+#
+#   pnpm dsh web \
+#     --patch <this file> \
+#     --patch <path-to>/cordis.local.yml
+#
+# Later patches win, so ordering matters when two layers touch one entry.
+
+# --- 1. Creator mode itself -------------------------------------------------
+# The plugin_manager tool, shipped off because it rewrites profile
+# configuration from inside a conversation. Turning it on is what lets the
+# agent install and toggle plugins on its own.
+- id: tool-plugin-manager
+  disabled: false
+
+# --- 2. Filesystem search ---------------------------------------------------
+# Content search across the workspace. Without it the agent can only read files
+# it can already name, which turns "where is X handled?" into a guessing game.
+- id: tool-fs-search
+  disabled: false
+
+# --- 3. Skills --------------------------------------------------------------
+# Loads reusable instruction bundles from disk, so project conventions live in
+# files rather than in whatever the user remembers to paste.
+- id: skill-filesystem
+  disabled: false
+
+- id: tool-skill
+  disabled: false
+
+# --- 4. Plan mode -----------------------------------------------------------
+# A read-only planning phase before execution. On a long task this is the
+# difference between a considered approach and an improvised one.
+- id: plan-mode
+  disabled: false
+
+# --- 5. Compaction ----------------------------------------------------------
+# Folds an overlong transcript instead of failing the request — the same
+# problem stage 5 of harness-from-scratch solves by hand, solved here by a
+# plugin the harness already ships.
+- id: compaction-basic
+  disabled: false
+
+- id: command-compact
+  disabled: false
+
+# --- 6. Subagent control ----------------------------------------------------
+# Lets the agent see and steer the subagents it spawns, rather than firing them
+# off blind.
+- id: tool-subagent-control
+  disabled: false
+
+# --- 7. Session titles ------------------------------------------------------
+# Not an enable but a re-tune: the shipped title is five words, which reads as
+# a fragment in a long session list. This is the configuration seam the harness
+# docs care about — anything two deployments might set differently belongs in
+# config, not in code.
+- id: session-title
+  config:
+    fallbackMaxWords: 8
+    fallbackMaxBytes: 60
+    maxTitleBytes: 120

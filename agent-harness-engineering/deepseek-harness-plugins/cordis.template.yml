@@ -1,0 +1,23 @@
+# Patch overlay that loads both plugins into a running profile.
+#
+# The loader needs absolute paths, which differ per machine, so this file is a
+# template. Run `node scripts/setup.mjs` to generate `cordis.local.yml` with the
+# paths filled in, then boot the harness with:
+#
+#   pnpm dsh web --patch <path-to>/cordis.local.yml
+#
+# Generated file is gitignored; this template is the committed source.
+
+- insert:
+    - id: scratchpad
+      name: '{{ROOT}}/plugins/scratchpad/src/index.ts'
+      config:
+        path: '~/.dsh/scratchpad.json'
+        maxNotes: 200
+        maxNoteLength: 2000
+
+    - id: session-pulse
+      name: '{{ROOT}}/plugins/session-pulse/src/index.ts'
+      config:
+        logCalls: true
+        repeatWarning: 15
