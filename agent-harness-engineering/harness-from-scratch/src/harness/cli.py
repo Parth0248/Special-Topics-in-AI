@@ -18,11 +18,16 @@ EXIT_WORDS = {"exit", "quit", ":q"}
 
 
 def _load_env() -> None:
-    """Read .env from this project, then fall back to the repository root."""
-    here = Path(__file__).resolve()
-    project_root = here.parents[2]
-    load_dotenv(project_root / ".env")
-    load_dotenv(project_root.parent / ".env")
+    """Load the nearest .env, searching upward from this file.
+
+    Walking up rather than indexing a fixed number of parents means the project
+    can be moved or nested without breaking the lookup.
+    """
+    for directory in Path(__file__).resolve().parents:
+        candidate = directory / ".env"
+        if candidate.is_file():
+            load_dotenv(candidate)
+            return
 
 
 def _show_tool(name: str, args: dict) -> None:

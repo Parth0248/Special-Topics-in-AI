@@ -45,6 +45,18 @@ A ReAct loop alternates between reasoning and acting…
 
 Any Gemini model id works — set `HARNESS_MODEL` in `.env`.
 
+## Tests
+
+```sh
+uv pip install -e ".[dev]"
+uv run pytest
+```
+
+No API key needed — the suite covers the tool layer, which is where the failure
+handling lives. What it pins down: an unknown tool, a tool that raises, and a call
+with wrong arguments all have to come back as readable text rather than an exception,
+because any of the three escaping would kill the loop.
+
 ## How it is put together
 
 ```
@@ -53,6 +65,7 @@ src/harness/
   agent.py    The loop, and the stopping rule that keeps it from running forever.
   tools.py    The registry: what the model may propose, and how proposals run.
   cli.py      The terminal front end.
+tests/        Tool-layer tests. No network, no key.
 ```
 
 The split matters more than it looks. `agent.py` asks `llm.py` for a `Response` and

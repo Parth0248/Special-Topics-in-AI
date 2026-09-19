@@ -18,20 +18,18 @@ capability costs.
 
 **Python · Gemini**
 
-### 2. [`deepseek-harness-plugins/`](deepseek-harness-plugins/)
+### 2. `deepseek-harness-plugins/` — in progress
 
-Two plugins written from scratch for the [DeepSeek Harness](https://github.com/deepseek-harness),
-plus a Creator-mode profile layering five more on top of the stock build. Where project 1
-is about designing seams, this one is about fitting into someone else's.
+Two plugins written from scratch for the DeepSeek Harness, plus a Creator-mode profile
+layering five more on top of the stock build. Where project 1 is about designing seams,
+this one is about fitting into someone else's.
 
 **TypeScript · Cordis**
 
-### 3. [`autoresearch-harness/`](autoresearch-harness/)
+### 3. `autoresearch-harness/` — planned
 
 A harness aimed at a task where success is not a passing test but a result worth
 keeping: propose a hypothesis, run the experiment, read what happened, revise.
-
-**TBD**
 
 ## Why three
 
