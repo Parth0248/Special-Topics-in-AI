@@ -1,0 +1,40 @@
+# ---- Secrets ----
+.env
+.env.*
+!.env.example
+*.key
+*credentials*.json
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# ---- Node / TypeScript ----
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+.pnpm-store/
+
+# ---- Harness / runtime artifacts ----
+.dsh-build/
+.dsh-home/
+*.log
+logs/
+sessions/
+
+# ---- Local resolved config (generated from .example templates) ----
+**/cordis.local.yml
+
+# ---- Editors / OS ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
