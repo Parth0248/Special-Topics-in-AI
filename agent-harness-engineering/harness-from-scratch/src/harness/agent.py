@@ -12,6 +12,7 @@ from typing import Callable
 
 from google.genai import types
 
+from .context import ContextManager
 from .llm import LLM, Response, ToolCall
 from .permissions import Policy
 from .tools import Registry, default_registry
@@ -47,10 +48,15 @@ class Agent:
     llm: LLM
     registry: Registry = field(default_factory=default_registry)
     policy: Policy = field(default_factory=Policy)
+    context: ContextManager | None = None
     system_prompt: str = SYSTEM_PROMPT
     max_steps: int = MAX_STEPS
     on_tool: ToolObserver | None = None
     messages: list[types.Content] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.context is None:
+            self.context = ContextManager(llm=self.llm)
 
     def send(self, user_input: str) -> str:
         """Run the loop until the model answers without asking for a tool."""
@@ -59,6 +65,10 @@ class Agent:
         )
 
         for _ in range(self.max_steps):
+            # Checked every step, not once per turn: a single tool result can
+            # be large enough to blow the budget on its own.
+            self.messages = self.context.maybe_compact(self.messages)
+
             response = self.llm.respond(
                 self.messages,
                 self.system_prompt,

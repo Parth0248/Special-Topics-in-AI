@@ -66,6 +66,7 @@ src/harness/
   tools.py         The registry: what the model may propose, and how proposals run.
   permissions.py   The gate: whether a proposal is allowed to become an action.
   sandbox.py       The floor: where an action runs and what it can reach.
+  context.py       The budget: what to keep when the transcript outgrows the window.
   cli.py           The terminal front end.
 tests/             No network, no key.
 ```
@@ -177,3 +178,39 @@ you › now read ../secret.txt, one directory above the workspace
 agent › I cannot read ../secret.txt because all file paths are restricted to
         the workspace directory and cannot leave it.
 ```
+
+**Stage 5 — context.** Transcripts only grow, tool results are large, and eventually
+the next request does not fit. Two honest options: drop the oldest turns, or summarise
+them and keep the summary in their place. This does the second, and falls back to the
+first when the summary call fails — losing the summary beats losing the session.
+
+Two things had to be right, and only one of them was obvious.
+
+*Where the cut lands.* A transcript sliced between a tool call and its result leaves a
+call with no response, and the provider rejects the next request. `find_safe_split`
+walks backwards off any turn that opens tool calls, so the boundary always falls
+between complete exchanges. This is the third appearance of the same underlying rule —
+after the `thought_signature` in stage 2 and the denial response in stage 3 — that the
+transcript is a structure with invariants, not a list of strings.
+
+*What the summary records.* The first version of the prompt asked for "files read or
+written, with their paths", and it produced summaries like "read recipe.txt to find
+the secret ingredient" — which is a note about activity, not a finding. Tested by
+asking the agent afterward what the ingredient was, it could not say. The fix was to
+demand findings over activity:
+
+> Record findings, not activity. "Read config.py" is worthless to your future self;
+> "config.py sets DEBUG=True and reads DATABASE_URL from the environment" is the thing
+> worth keeping.
+
+Same transcript, same budget, after the change:
+
+```
+[turn 1]  ⚒ read_file(path=recipe.txt)  →  "the secret ingredient is smoked paprika"
+[turns 2-4: enough filler to force 5 compactions]
+
+you › without reading any files again, what was the secret ingredient?
+agent › The secret ingredient was smoked paprika.
+```
+
+The transcript stayed at 6 turns throughout while the session ran on.
