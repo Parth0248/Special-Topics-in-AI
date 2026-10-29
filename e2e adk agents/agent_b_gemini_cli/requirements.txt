@@ -1,0 +1,7 @@
+# Dependencies for Agent B: Gemini CLI in ADK Pipeline Tool Agent
+pydantic>=2.10.0
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+rich>=13.0.0
+python-dotenv>=1.0.0
+google-genai>=1.0.0

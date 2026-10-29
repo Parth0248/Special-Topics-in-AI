@@ -1,0 +1,4 @@
+# Dependencies for Agent D: Production-Quality Code Review Assistant
+google-genai>=1.0.0
+pytest>=8.0.0
+pydantic>=2.0.0

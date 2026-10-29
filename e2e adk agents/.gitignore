@@ -1,0 +1,18 @@
+# Python & Environments
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Temporary test/audit runs
+.audit_*
+.pytest_tmp*
+.victory_audit_*
+
+# Secrets & Local Overrides
+.env
+.env.*
+!.env.example
